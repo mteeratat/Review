@@ -1,12 +1,14 @@
 const express = require("express")
 const mysql = require("mysql")
+const util = require('util');
 
+const db_name = "new_schema"
 const app = express()
 const conn = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "123456",
-    database: "new_schema"
+    database: db_name
 })
 
 class Review{
@@ -39,22 +41,47 @@ conn.connect( (err) => {
     else console.log("connected")
 })
 
-var sql = "select * from review"
-conn.query(sql, function (err, result) {
-    if (err) throw err;
-    console.log("Result: " + result);
-    console.log(result)
-});
-
 var newreview1 = new Review("ข้าวไข่เจียว","รถเข็น",9,"กินง่าย")
 
 app.get("/", function(req, res){
     res.send(reviewlist)
+    let sql = "select * from review"
+    conn.query(sql, function (err, result) {
+        if (err) throw err;
+        console.log("Result: " + result);
+        console.log(result)
+    });
 })
 
 app.post("/add", (req, res) => {
-    reviewlist.push(newreview1)
-    res.send("complete")
+    // reviewlist.push(newreview1)
+
+    let sqll = "SELECT COUNT(*) FROM review";
+    // let sqll = "SELECT LAST_INSERT_ID();"
+  
+    const queryy = util.promisify(conn.query).bind(conn)
+
+    let result = async () => {
+        res = await queryy(sqll)
+        console.log(res[0]["COUNT(*)"])
+        return res
+    }
+
+    result()
+    .then((res) => {
+        console.log("here"+res[0]["COUNT(*)"])
+        return res[0]["COUNT(*)"]
+    })
+    .then((id) => {
+    let sql = "insert into review (id, food_name, store_name, rating, review) values ('" + id + "', '" + newreview1.food_name + "', '" 
+    + newreview1.store_name + "', '" + newreview1.rating + "', '" + newreview1.review + "');";
+    console.log(sql);
+    conn.query(sql, function (err, result) {
+        if (err) throw err;
+        console.log("1 record inserted")
+    });
+    })
+    .then(res.send("1 record inserted"))
 })
 
 app.listen(3030)
